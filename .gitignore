@@ -1,0 +1,7 @@
+/.idea
+/data_processing/dataset/
+/training_and_testing/logs/
+/venv
+/training_and_testing/normalized_data.csv
+/training_and_testing/labelEncoded_data.csv
+
