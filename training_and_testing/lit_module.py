@@ -1,6 +1,9 @@
 import lightning as pl
 import torch
+import csv #Febin
 import torch.nn.functional as F
+from matplotlib import pyplot as plt #Febin
+
 from nn_modules import ConstantVelocityModel
 from nn_modules import MultiLayerPerceptron
 
@@ -51,8 +54,8 @@ class LitModule(pl.LightningModule):
         # TODO: You have to modify this based on your task, model and data. This is where most of the engineering
         #  happens!
         x, y = self.prep_data_for_step(batch)
-        #x = x.float() # Ensure x is in FP32 #Febin
-        #y = y.float()  # Ensure y is in FP32 #Febin
+        x = x.float() # Ensure x is in FP32 #Febin
+        y = y.float()  # Ensure y is in FP32 #Febin
 
 
         y_hat_list = []
@@ -68,9 +71,33 @@ class LitModule(pl.LightningModule):
         y_hat = torch.stack(y_hat_list, dim=1).squeeze()
 
         loss = self.model.loss_function(y_hat, y)
+
         self.log(f"{string}_loss", loss)
+
+        #trajectories = [y, y_hat] #Febin
+        #self.plotGraph(trajectories) #Febin
+
         return loss
 
+    #Febin
+    """def plotGraph(self, trajectories):
+
+        names = ['Ground Truth', 'Predicted']
+        fig = plt.figure(figsize=(8, 6))
+        for k in range(0, len(trajectories)):
+            name = names[k]
+            X_coord = trajectories[k][:, 0, 0]
+            Y_coord = trajectories[k][:, 0, 1]
+            plt.plot(X_coord, Y_coord, label=f"Bicycle Path_{name}")
+            plt.scatter(X_coord[0], Y_coord[0], label=f"Start_{name}")
+            plt.scatter(X_coord[-1], Y_coord[-1], label=f"End_{name}")
+            plt.xlabel('X position (m)')
+            plt.ylabel('Y position (m)')
+            plt.title('Bicycle Trajectory')
+            plt.legend()
+            plt.axis('equal')
+            plt.grid(True)
+        plt.show()"""
     def prep_data_for_step(self, batch):
         # TODO: This is a hacky way to load one rectangular block from the data, and divide it into x and y of different
         #  sizes afterwards.

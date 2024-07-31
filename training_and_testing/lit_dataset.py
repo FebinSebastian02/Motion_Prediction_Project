@@ -86,7 +86,7 @@ class inD_RecordingDataset(Dataset):
                         #Febin3
                         #Add self.meta data here and concatenate both tracks and meta data here before giving to train and test
 
-        elif model_type == "CVM":
+        elif model_type == "CVM" or model_type == "CAM":
                 if type(self.recording_id) == list:
                     self.data = pd.DataFrame()
                     self.meta_data = pd.DataFrame()  # Febin - Creating an empty panda dataframe for meta files
@@ -105,11 +105,11 @@ class inD_RecordingDataset(Dataset):
 
                     print(f"\n///Raw tracks_data/// \n {self.data}")
                     print(f"\n///Raw tracks_meta_data/// \n {self.meta_data}")
-                    preprocessor = DataPreprocessor(self.data)  # Calling data preprocessor constructor
-                    downsample_data = preprocessor.downsample(1)  # Down sampling the data to 50% of its original size
-                    print(f"\n///Downsampled_data/// \n {downsample_data}")
+                    #preprocessor = DataPreprocessor(self.data)  # Calling data preprocessor constructor
+                    #downsample_data = preprocessor.downsample(1)  # Down sampling the data to 50% of its original size
+                    #print(f"\n///Downsampled_data/// \n {downsample_data}")
 
-                    self.data = downsample_data
+                    #self.data = downsample_data
 
 
                 else:

@@ -21,7 +21,7 @@ from callbacks import create_callbacks
 from lit_datamodule import inD_RecordingModule
 from lit_module import LitModule
 from utils import create_wandb_logger, get_data_path, build_module
-from nn_modules import ConstantVelocityModel, MultiLayerPerceptron
+from nn_modules import ConstantVelocityModel, MultiLayerPerceptron, ConstantAccelerationModel
 from select_features import select_features
 
 ##################################################################
@@ -47,23 +47,26 @@ stage = "test"
 
 #recording_ID = ["01", "02"]  # , "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16",
 # "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32"]
-recording_ID = ["18"]  # Febin1
+recording_ID = ["20"]  # Febin1
 #21,22 - Trainings
 #18 - Testing
 
 # TODO: Change the features to the features you want to use. The features are defined in the select_features.py file
 #  This is referring to an unmodified dataset. So depending on your goal, modify the dataset and set the features
 #  accordingly. If you change your dataset, you have to change recreate a feature list that suits your dataset
-#features, number_of_features = select_features() - Previous code
-features, number_of_features,features_meta, number_of_meta_features = select_features() #Febin
 
-past_sequence_length = 6
-future_sequence_length = 3
+#Febin
+model_type = "MLP"
+
+#features, number_of_features = select_features() - Previous code
+features, number_of_features,features_meta, number_of_meta_features = select_features(model_type) #Febin
+
+past_sequence_length = 1
+future_sequence_length = 1
 sequence_length = past_sequence_length + future_sequence_length
 
 #################### Model Parameters #####################################
-#Febin
-model_type = "MLP"
+
 
 match model_type:
     case "MLP":
@@ -73,6 +76,11 @@ match model_type:
         hidden_size = 32
 
     case "CVM":
+        batch_size = 50
+        input_size = number_of_features
+        output_size = number_of_features
+
+    case "CAM":
         batch_size = 50
         input_size = number_of_features
         output_size = number_of_features
@@ -104,9 +112,13 @@ if __name__ == '__main__':
     if model_type == "CVM":
         # Handle ConstantVelocityModel setup
         mdl = ConstantVelocityModel()
-    else:
+    elif model_type == "MLP":
         # Handle other model types
         mdl = MultiLayerPerceptron(input_size, hidden_size, output_size)
+    elif model_type == "CAM":
+        mdl = ConstantAccelerationModel()
+
+
 
 
     # TODO: In the datamodule, the dataset is created. The dataset is created using the inD_RecordingDataset class.
@@ -120,7 +132,7 @@ if __name__ == '__main__':
 
     #################### Setup Training #####################################
     # TODO: Change the epochs to the number of epochs you want to train
-    epochs = 1
+    epochs = 10
     #epochs = 3 #Febin
     model = LitModule(mdl, number_of_features, sequence_length, past_sequence_length, future_sequence_length,
                       batch_size)
@@ -153,19 +165,23 @@ if __name__ == '__main__':
         trainer.fit(model, dm)
         #trainer.test(model, dm)
     elif stage == "test":
+        #Febin
         #insert loading here
-        model_params = {
-            'model': mdl,
-            'number_of_features': number_of_features,
-            'sequence_length': sequence_length,
-            'past_sequence_length': past_sequence_length,
-            'future_sequence_length': future_sequence_length,
-            'batch_size': batch_size
-        }
+        if model_type == "MLP":
+            model_params = {
+                'model': mdl,
+                'number_of_features': number_of_features,
+                'sequence_length': sequence_length,
+                'past_sequence_length': past_sequence_length,
+                'future_sequence_length': future_sequence_length,
+                'batch_size': batch_size
+            }
 
-        ckpt_file_path = os.path.join(log_path, 'best-checkpoint.ckpt') #Febin
-        model1 = LitModule.load_from_checkpoint(ckpt_file_path, **model_params) #Febin
-        trainer.test(model1, dm) #Febin"""
-        #trainer.test(model, dm) Original code
+            ckpt_file_path = os.path.join(log_path, 'best-checkpoint.ckpt') #Febin
+            model1 = LitModule.load_from_checkpoint(ckpt_file_path, **model_params) #Febin
+            trainer.test(model1, dm) #Febin"""
+        else: #Febin
+            trainer.test(model, dm) #Original code
+
         #trainer.test(model, dm, checkpoint_path)    #Febin
     wandb.finish()

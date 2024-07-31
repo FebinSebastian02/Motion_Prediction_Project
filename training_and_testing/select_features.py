@@ -1,27 +1,73 @@
-def select_features():
+def select_features(model_type):
     # TODO: Here you have to select the features you want to use for your model.
     #  If you change your data set, you have to change this function accordingly.
-    features = [
-        #"recordingId",  # Commented before
-        "trackId",#
-        #"frame",  # Commented before
-        #"trackLifetime",  # Commented before
-        "xCenter",
-        "yCenter",
-        "heading",
-        #"width",  # Commented before
-        #"length",  # Commented before
-        "xVelocity",
-        "yVelocity",
-        "xAcceleration",
-        "yAcceleration",
-        "lonVelocity",
-        "latVelocity",
-        "lonAcceleration",
-        "latAcceleration",
-    ]
-    meta_features = ["recordingId", "trackId", "initialFrame", "finalFrame", "numFrames", "width", "length", "class"] #Febin
+    match model_type:
+        case "MLP":
+            features = [
+                # "recordingId",  # Commented before
+                "trackId",
+                # "frame",  # Commented before
+                # "trackLifetime",  # Commented before
+                "xCenter",
+                "yCenter",
+                "heading",
+                # "width",  # Commented before
+                # "length",  # Commented before
+                "xVelocity",
+                "yVelocity",
+                "xAcceleration",
+                "yAcceleration",
+                "lonVelocity",
+                "latVelocity",
+                "lonAcceleration",
+                "latAcceleration",
+            ]
+
+        case "CVM":
+            features = [
+                # "recordingId",  # Commented before
+                # "trackId",
+                # "frame",  # Commented before
+                # "trackLifetime",  # Commented before
+                "xCenter",
+                "yCenter",
+                # "heading",
+                # "width",  # Commented before
+                # "length",  # Commented before
+                "xVelocity",
+                "yVelocity",
+                # "xAcceleration",
+                # "yAcceleration",
+                # "lonVelocity",
+                # "latVelocity",
+                # "lonAcceleration",
+                # "latAcceleration",
+            ]
+
+        case "CAM":
+            features = [
+                # "recordingId",  # Commented before
+                # "trackId",
+                # "frame",  # Commented before
+                # "trackLifetime",  # Commented before
+                "xCenter",
+                "yCenter",
+                # "heading",
+                # "width",  # Commented before
+                # "length",  # Commented before
+                "xVelocity",
+                "yVelocity",
+                "xAcceleration",
+                "yAcceleration",
+                # "lonVelocity",
+                # "latVelocity",
+                # "lonAcceleration",
+                # "latAcceleration",
+            ]
+
+    meta_features = ["recordingId", "trackId", "initialFrame", "finalFrame", "numFrames", "width", "length",
+                     "class"]  # Febin
     number_of_features = len(features)
-    number_of_meta_features = len(meta_features) #Febin
-    #return features, number_of_features
-    return features, number_of_features, meta_features, number_of_meta_features #Febin
+    number_of_meta_features = len(meta_features)  # Febin
+    # return features, number_of_features
+    return features, number_of_features, meta_features, number_of_meta_features  # Febin
