@@ -22,47 +22,53 @@ def select_features(model_type):
                 "lonAcceleration",
                 "latAcceleration",
             ]
-
-        case "CVM":
+        case "LSTM":
             features = [
                 # "recordingId",  # Commented before
-                # "trackId",
-                # "frame",  # Commented before
+                "trackId",
+                #"frame",
+                # The time step or frame at which the data is recorded.Reason: LSTM models work with sequential data, and time steps are essential for maintaining the order and temporal relationship between observations.
                 # "trackLifetime",  # Commented before
                 "xCenter",
                 "yCenter",
-                # "heading",
-                # "width",  # Commented before
-                # "length",  # Commented before
-                "xVelocity",
-                "yVelocity",
-                # "xAcceleration",
-                # "yAcceleration",
-                # "lonVelocity",
-                # "latVelocity",
-                # "lonAcceleration",
-                # "latAcceleration",
-            ]
-
-        case "CAM":
-            features = [
-                # "recordingId",  # Commented before
-                # "trackId",
-                # "frame",  # Commented before
-                # "trackLifetime",  # Commented before
-                "xCenter",
-                "yCenter",
-                # "heading",
+                "heading",
                 # "width",  # Commented before
                 # "length",  # Commented before
                 "xVelocity",
                 "yVelocity",
                 "xAcceleration",
                 "yAcceleration",
-                # "lonVelocity",
-                # "latVelocity",
-                # "lonAcceleration",
-                # "latAcceleration",
+                "lonVelocity",
+                "latVelocity",
+                "lonAcceleration",
+                "latAcceleration"
+            ]
+
+        case "CVM":
+            features = [
+                "xCenter",
+                "yCenter",
+                "xVelocity",
+                "yVelocity"
+            ]
+
+        case "CAM":
+            features = [
+                "xCenter",
+                "yCenter",
+                "xVelocity",
+                "yVelocity",
+                "xAcceleration",
+                "yAcceleration",
+            ]
+
+        case "BCM":
+            features = [
+                "xCenter",  # x-coordinate of the vehicle's position
+                "yCenter",  # y-coordinate of the vehicle's position
+                "heading",  # Direction the vehicle is facing
+                "lonVelocity",
+                "lonAcceleration",
             ]
 
     meta_features = ["recordingId", "trackId", "initialFrame", "finalFrame", "numFrames", "width", "length",

@@ -14,6 +14,7 @@
 
 import logging
 import lightning as pl
+import matplotlib.pyplot as plt
 import torch
 import wandb
 import os #Febin
@@ -21,9 +22,18 @@ from callbacks import create_callbacks
 from lit_datamodule import inD_RecordingModule
 from lit_module import LitModule
 from utils import create_wandb_logger, get_data_path, build_module
-from nn_modules import ConstantVelocityModel, MultiLayerPerceptron, ConstantAccelerationModel
+from nn_modules import ConstantVelocityModel, MultiLayerPerceptron, ConstantAccelerationModel, LSTMModel, BicycleModel
 from select_features import select_features
+from lit_module import LitModule
 
+#Febin - written for LSTM
+import torch.backends.mkldnn as mkldnn
+mkldnn.enabled = False
+
+
+#torch.backends.cudnn.enabled = False#FEbin
+
+#torch.backends.mkldnn.enabled = False #Check if this is needed
 ##################################################################
 torch.set_float32_matmul_precision('medium')
 torch.autograd.set_detect_anomaly(True)
@@ -45,9 +55,9 @@ stage = "test"
 #################### Training Parameters #####################################
 # TODO: Change the recording_ID to the recordings you want to train on
 
-#recording_ID = ["01", "02"]  # , "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16",
+recording_ID = ["18"]  # , "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16",
 # "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32"]
-recording_ID = ["20"]  # Febin1
+#recording_ID = ["18"]  # Febin1
 #21,22 - Trainings
 #18 - Testing
 
@@ -56,36 +66,39 @@ recording_ID = ["20"]  # Febin1
 #  accordingly. If you change your dataset, you have to change recreate a feature list that suits your dataset
 
 #Febin
-model_type = "MLP"
+model_type = "BCM"
 
 #features, number_of_features = select_features() - Previous code
 features, number_of_features,features_meta, number_of_meta_features = select_features(model_type) #Febin
 
-past_sequence_length = 1
-future_sequence_length = 1
+
+past_sequence_length = 1    #for lstm and mlp
+future_sequence_length = 1  #for lstm and mlp
+#past_sequence_length = 1 #for other models
+#future_sequence_length = 1 #for other models
 sequence_length = past_sequence_length + future_sequence_length
 
 #################### Model Parameters #####################################
+if model_type == "MLP":
+    batch_size = 50
+    input_size = number_of_features * past_sequence_length
+    output_size = number_of_features
+    hidden_size = 32
+
+elif model_type == "LSTM":
+    batch_size = 50
+    input_size = number_of_features
+    output_size = number_of_features
+    hidden_size = 32
+    num_layers = 1  # Number of LSTM layers
+
+else:
+    batch_size = 50
+    input_size = number_of_features
+    output_size = number_of_features
 
 
-match model_type:
-    case "MLP":
-        batch_size = 50
-        input_size = number_of_features * past_sequence_length
-        output_size = number_of_features
-        hidden_size = 32
-
-    case "CVM":
-        batch_size = 50
-        input_size = number_of_features
-        output_size = number_of_features
-
-    case "CAM":
-        batch_size = 50
-        input_size = number_of_features
-        output_size = number_of_features
-
-#MLP #Previously present
+    #MLP #Previously present
 """batch_size = 50
 input_size = number_of_features * past_sequence_length
 output_size = number_of_features
@@ -109,15 +122,17 @@ if __name__ == '__main__':
     #mdl = ConstantVelocityModel()
 
     #Febin
-    if model_type == "CVM":
-        # Handle ConstantVelocityModel setup
-        mdl = ConstantVelocityModel()
-    elif model_type == "MLP":
-        # Handle other model types
-        mdl = MultiLayerPerceptron(input_size, hidden_size, output_size)
-    elif model_type == "CAM":
-        mdl = ConstantAccelerationModel()
-
+    match model_type:
+        case "MLP":
+            mdl = MultiLayerPerceptron(input_size, hidden_size, output_size)
+        case "CVM":
+            mdl = ConstantVelocityModel()
+        case "CAM":
+            mdl = ConstantAccelerationModel()
+        case "BCM":
+            mdl = BicycleModel()
+        case "LSTM":
+            mdl = LSTMModel(input_size, hidden_size, output_size, num_layers)
 
 
 
@@ -132,7 +147,7 @@ if __name__ == '__main__':
 
     #################### Setup Training #####################################
     # TODO: Change the epochs to the number of epochs you want to train
-    epochs = 10
+    epochs =1
     #epochs = 3 #Febin
     model = LitModule(mdl, number_of_features, sequence_length, past_sequence_length, future_sequence_length,
                       batch_size)
@@ -167,7 +182,7 @@ if __name__ == '__main__':
     elif stage == "test":
         #Febin
         #insert loading here
-        if model_type == "MLP":
+        if model_type == "MLP" or model_type == "LSTM":
             model_params = {
                 'model': mdl,
                 'number_of_features': number_of_features,
@@ -177,11 +192,27 @@ if __name__ == '__main__':
                 'batch_size': batch_size
             }
 
+
             ckpt_file_path = os.path.join(log_path, 'best-checkpoint.ckpt') #Febin
-            model1 = LitModule.load_from_checkpoint(ckpt_file_path, **model_params) #Febin
+            checkpoint = torch.load(ckpt_file_path)
+            print(f"Checkpoint keys :- {checkpoint['state_dict'].keys()}")  # Checkpoint keys
+            print(f"Model keys :- {model.state_dict().keys()}")  # Model keys
+            model1 = LitModule.load_from_checkpoint(ckpt_file_path, **model_params,strict=False) #Febin
             trainer.test(model1, dm) #Febin"""
         else: #Febin
             trainer.test(model, dm) #Original code
+
+            #Febin
+
+            #trajectories = model.get_trajectories()
+            #model.plotGraph(trajectories)  # Febin
+            #plt.show()
+
+            #ground_truth, predicted = model.aggregate_trajectories()  # Aggregate trajectories #Febin
+        # Debugging: Print the shapes of ground_truth and predicted
+        """print(f"Shape of ground_truth: {ground_truth.shape}")
+        print(f"Shape of predicted: {predicted.shape}")
+        model.plot_trajectories(ground_truth, predicted)"""
 
         #trainer.test(model, dm, checkpoint_path)    #Febin
     wandb.finish()

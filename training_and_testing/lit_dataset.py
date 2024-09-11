@@ -37,7 +37,7 @@ class inD_RecordingDataset(Dataset):
 
         pickle_filename = f"{path}/{recording_id}_processed_data.pkl"
 
-        if model_type == "MLP":
+        if model_type == "MLP" or model_type == "LSTM":
             # Load processed data if it exists
             if os.path.exists(pickle_filename):
                 print("Loading processed data from pickle file.")
@@ -86,7 +86,7 @@ class inD_RecordingDataset(Dataset):
                         #Febin3
                         #Add self.meta data here and concatenate both tracks and meta data here before giving to train and test
 
-        elif model_type == "CVM" or model_type == "CAM":
+        elif model_type == "CVM" or model_type == "CAM" or model_type == "BCM":
                 if type(self.recording_id) == list:
                     self.data = pd.DataFrame()
                     self.meta_data = pd.DataFrame()  # Febin - Creating an empty panda dataframe for meta files
