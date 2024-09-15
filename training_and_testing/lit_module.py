@@ -29,9 +29,6 @@ class LitModule(pl.LightningModule):
         self.past_sequence_length = past_sequence_length
         self.future_sequence_length = future_sequence_length
         self.batch_size = batch_size
-        #self.trajectories = {"ground_truth": [], "predicted": []}  # Febin
-        # A dictionary was created to store values of ground truth and predicted values in list with keys being
-        # ground_truth and predicted
 
     def forward(self, x):
         return self.model(x)
@@ -58,19 +55,17 @@ class LitModule(pl.LightningModule):
         # TODO: You have to modify this based on your task, model and data. This is where most of the engineering
         #  happens!
         x, y = self.prep_data_for_step(batch)
-        x = x.float() # Ensure x is in FP32 #Febin
+        x = x.float()  # Ensure x is in FP32 #Febin
         y = y.float()  # Ensure y is in FP32 #Febin
 
-
         y_hat_list = []
+
         for k in range(self.future_sequence_length):
             y_hat_k = self(x)
             y_hat_list.append(y_hat_k)
             if y_hat_k.dim() < 3:
                 y_hat_k = y_hat_k.unsqueeze(1)
-            # x = torch.cat([x[:, 1:, :], y_hat_k], dim=1)
-            x = torch.cat([x[:, 1:, :].float(), y_hat_k.float()], dim=1) #Febin
-            #print(f"x dtype: {x.dtype}, y_hat_k dtype: {y_hat_k.dtype}") #Febin
+            x = torch.cat([x[:, 1:, :].float(), y_hat_k.float()], dim=1)  # Febin
 
         y_hat = torch.stack(y_hat_list, dim=1).squeeze()
 
@@ -78,39 +73,83 @@ class LitModule(pl.LightningModule):
 
         self.log(f"{string}_loss", loss)
 
-        #trajectories = [y, y_hat] #Febin
-        #self.plotGraph(trajectories) #Febin
 
+        #For plot
+        # Store predictions and ground truth for plotting
+        if batch_idx == 0:
+
+            self.y_pred = y_hat
+            self.y_true = y
+        else:
+
+
+            self.y_pred = torch.cat((self.y_pred, y_hat), dim=0)
+            self.y_true = torch.cat((self.y_true, y), dim=0)
         return loss
-        #self.trajectories = [y, y_hat]  # Febin
-        # trajectories = model.get_trajectories()
-        #self.plotGraph(self.trajectories)  # Febin
 
-        #Febin
+    def plot_predictions(self, y_pred, y_true, downsample_factor=10000):
+        # Ensure y_pred and y_true are detached, moved to CPU, and cast to float32
+        y_pred = y_pred.detach().cpu().to(torch.float32).numpy()
+        y_true = y_true.detach().cpu().to(torch.float32).numpy()
 
-        # Ensure y and y_hat have at least 2 dimensions for proper concatenation later
-        """   if y.dim() == 1:
-            y = y.unsqueeze(1)
-        if y_hat.dim() == 1:
-            y_hat = y_hat.unsqueeze(1)
+        # Debug statements to check dimensions
+        print(f"y_pred shape: {y_pred.shape}")
+        print(f"y_true shape: {y_true.shape}")
 
-        # Append to trajectories
-        self.trajectories['ground_truth'].append(y.cpu().numpy())
-        self.trajectories['predicted'].append(y_hat.cpu().numpy())"""
+        # Reshape y_pred and y_true to 2-dimensional arrays
+        if y_pred.ndim == 3 or y_true.ndim == 3:
+            y_pred = y_pred.reshape(-1, y_pred.shape[-2] * y_pred.shape[-1])
+            y_true = y_true.reshape(-1, y_true.shape[-2] * y_true.shape[-1])
+        # Reshape y_true if it has an extra dimension
+        if y_true.ndim == 3 and y_true.shape[1] == 1:
+            y_true = y_true.squeeze(1)
+
+        # Downsample to plot fewer points if the dataset is too large
+        if y_pred.shape[0] > downsample_factor:
+            indices = np.arange(0, y_pred.shape[0], downsample_factor)
+            y_pred = y_pred[indices]
+            y_true = y_true[indices]
+        if y_pred.ndim != 2 or y_true.ndim != 2:
+            raise ValueError("Expected y_pred and y_true to be 2-dimensional arrays")
+        # Check if y_pred and y_true are 2-dimensional
+        if y_pred.ndim == 2 and y_true.ndim == 2:
+            # Plot x predictions vs x ground truth
+            plt.figure(figsize=(14, 7))
+
+            plt.subplot(1, 2, 1)
+            plt.plot(y_true[:, 0].flatten(), label='x_true', color='blue', linestyle='-', alpha=0.6, linewidth=0.5)
+            plt.plot(y_pred[:, 0].flatten(), label='x_pred', color='red', linestyle='--', alpha=0.6, linewidth=0.5)
+            plt.xlabel('Time Step')
+            plt.ylabel('X Position')
+            plt.legend()
+            plt.title('X Position: Predicted vs Ground Truth')
+            plt.grid(True)
+
+            # Check if there is a second column to plot for y
+            if y_true.shape[1] > 1 and y_pred.shape[1] > 1:
+                # Plot y predictions vs y ground truth
+                plt.subplot(1, 2, 2)
+                plt.plot(y_true[:, 1].flatten(), label='y_true', color='blue', linestyle='-', alpha=0.6, linewidth=1)
+                plt.plot(y_pred[:, 1].flatten(), label='y_pred', color='red', linestyle='--', alpha=0.6, linewidth=1)
+                plt.xlabel('Time Step')
+                plt.ylabel('Y Position')
+                plt.legend()
+                plt.title('Y Position: Predicted vs Ground Truth')
+                plt.grid(True)
+
+            plt.tight_layout()
+            plt.show()
+        else:
+            raise ValueError("Expected y_pred and y_true to be 2-dimensional arrays")
 
     def prep_data_for_step(self, batch):
         # TODO: This is a hacky way to load one rectangular block from the data, and divide it into x and y of different
         #  sizes afterwards.
         #  If you don't do it like this, you run into trouble. Just stay aware of this.
-        #x = batch[:, :self.sequence_length, :] #febin
-        #x = batch[:, :self.past_sequence_length, :]
-        #y = batch[:, self.sequence_length:, :] #febin
-        #y = batch[:, self.past_sequence_length:, :]
-
-        x = batch[:, :self.past_sequence_length, :]  # Use past_sequence_length for x in lstm also
+        x = batch[:, :self.past_sequence_length, :]
+        y = batch[:, self.past_sequence_length:, :]
         #y = batch[:, self.past_sequence_length:self.past_sequence_length + self.future_sequence_length,
          #   :]  # Use future_sequence_length for y for lstm only
-        y = batch[:, self.past_sequence_length:, :]
         return x, y
 
     def configure_optimizers(self):
@@ -143,79 +182,11 @@ class LitModule(pl.LightningModule):
         }
         return optimizer_and_scheduler
 
-
-
         # Previous code
         # else:
         #     return []
         # else: #Febin
         # return [] #Febin
             # return None #Febin - modified for CVM error
-
-
-    """ # Febin"""
-"""  def get_trajectories(self):
-        return self.trajectories"""
-
-    # Febin
-
-    # New method to aggregate trajectories after the test phase
-"""    def aggregate_trajectories(self):
-        ground_truth = np.concatenate(self.trajectories['ground_truth'], axis=0)
-        predicted = np.concatenate(self.trajectories['predicted'], axis=0)
-
-        # Ensure ground_truth and predicted are 2D arrays with at least 2 columns
-        if ground_truth.ndim == 3 and ground_truth.shape[1] == 1:
-            ground_truth = ground_truth.squeeze(axis=1)
-
-        # Reshape if necessary to ensure at least 2 columns
-        if ground_truth.ndim == 1:
-            ground_truth = ground_truth.reshape(-1, 2)
-        if predicted.ndim == 1:
-            predicted = predicted.reshape(-1, 2)
-
-        if ground_truth.shape[1] < 2 or predicted.shape[1] < 2:
-            raise ValueError("Trajectories must have at least 2 columns for x and y coordinates.")
-
-        return ground_truth, predicted
-
-    def plot_trajectories(self, ground_truth, predicted, num_samples=100):
-        # Ensure ground_truth and predicted are numpy arrays
-        if isinstance(ground_truth, torch.Tensor):
-            ground_truth = ground_truth.cpu().numpy()
-        if isinstance(predicted, torch.Tensor):
-            predicted = predicted.cpu().numpy()
-
-        # Ensure ground_truth and predicted have at least 2 columns
-        assert ground_truth.shape[1] >= 2 and predicted.shape[
-            1] >= 2, "Trajectories must have at least 2 columns for x and y coordinates."
-
-        # Select a subset of the trajectories
-        if ground_truth.shape[0] > num_samples:
-            indices = np.random.choice(ground_truth.shape[0], num_samples, replace=False)
-        else:
-            indices = np.arange(ground_truth.shape[0])
-
-        ground_truth_subset = ground_truth[indices]
-        predicted_subset = predicted[indices]
-
-        # Plot the subset of trajectories
-        fig, ax = plt.subplots(figsize=(10, 8))
-        for gt, pred in zip(ground_truth_subset, predicted_subset):
-            ax.plot(gt[:, 0], gt[:, 1], color='b', alpha=0.5)
-            ax.plot(pred[:, 0], pred[:, 1], color='r', alpha=0.5)
-
-        # Plot the mean trajectory
-        mean_ground_truth = np.mean(ground_truth, axis=0)
-        mean_predicted = np.mean(predicted, axis=0)
-        ax.plot(mean_ground_truth[:, 0], mean_ground_truth[:, 1], color='b', linewidth=2, label='Mean Ground Truth')
-        ax.plot(mean_predicted[:, 0], mean_predicted[:, 1], color='r', linewidth=2, label='Mean Predicted')
-
-        ax.set_xlabel('X position (m)')
-        ax.set_ylabel('Y position (m)')
-        ax.set_title('Bicycle Trajectory')
-        ax.legend()
-        ax.grid(True)
-        plt.show()"""
 
 

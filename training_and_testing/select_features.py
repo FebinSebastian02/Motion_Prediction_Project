@@ -44,6 +44,28 @@ def select_features(model_type):
                 "latAcceleration"
             ]
 
+        case "GRU":
+            features = [
+                # "recordingId",  # Commented before
+                "trackId",
+                # "frame",
+                # The time step or frame at which the data is recorded.Reason: LSTM models work with sequential data, and time steps are essential for maintaining the order and temporal relationship between observations.
+                # "trackLifetime",  # Commented before
+                "xCenter",
+                "yCenter",
+                "heading",
+                # "width",  # Commented before
+                # "length",  # Commented before
+                "xVelocity",
+                "yVelocity",
+                "xAcceleration",
+                "yAcceleration",
+                "lonVelocity",
+                "latVelocity",
+                "lonAcceleration",
+                "latAcceleration"
+            ]
+
         case "CVM":
             features = [
                 "xCenter",
@@ -67,8 +89,14 @@ def select_features(model_type):
                 "xCenter",  # x-coordinate of the vehicle's position
                 "yCenter",  # y-coordinate of the vehicle's position
                 "heading",  # Direction the vehicle is facing
+                "xVelocity",
+                "yVelocity",
+                "xAcceleration",
+                "yAcceleration",
                 "lonVelocity",
+                "latVelocity",
                 "lonAcceleration",
+                "latAcceleration"
             ]
 
     meta_features = ["recordingId", "trackId", "initialFrame", "finalFrame", "numFrames", "width", "length",

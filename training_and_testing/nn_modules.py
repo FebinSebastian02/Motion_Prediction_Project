@@ -52,14 +52,7 @@ class ConstantVelocityModel(nn.Module):
 
     # Febin
     def loss_function(self, predictions, targets):
-        # print("inside constant velocity loss fn")
-
-        # Ensure predictions and targets have the same shape
-        # targets = targets.view_as(predictions) #Febin
         targets = targets.squeeze(1)  # Febin - To change shape from [43, 1, 12] to [43,12]
-        """print(f"Shape of targets:- {targets.shape}")
-        print(f"Predicted value: {predictions}")
-        print(f"Target value: {targets}")"""
         return F.mse_loss(predictions, targets)
 
 #Bicycle model
@@ -74,7 +67,7 @@ class BicycleModel(nn.Module):
 
         x_pos=x[:,0:1]#xCenter
         y_pos=x[:,1:2]#yCenter
-        heading=x[:,2:3]#heading
+        heading = x[:, 2:3]
         xv=x[:,3:4]#xVelocity
         yv=x[:,4:5]#yVelocity
         xa=x[:,5:6]#xAcceleration
@@ -85,41 +78,34 @@ class BicycleModel(nn.Module):
         lat_acceleration=x[:,10:11]#latAcceleration
 
         #Computederivatives
-        x_dot=xv*torch.cos(heading)
-        y_dot=xv*torch.sin(heading)
-        heading_dot=(xv*torch.tan(lat_velocity))/self.L
-        #heading_dot=yv/xv#
-        xv_dot=xa
-        ya_dot=(((2*xa*lat_velocity)+(xv*lat_acceleration)))*xv/self.L
-        xa_dot=lon_acceleration
-        delta_dot=lat_acceleration
+        # Compute state derivatives based on heading and velocity
+        x_dot = xv * torch.cos(heading) - yv * torch.sin(heading)
+        y_dot = xv * torch.sin(heading) + yv * torch.cos(heading)
+        heading_dot = (xv * lat_velocity) / self.L  # Updated to reflect yaw rate dynamics
 
-        #Updatestate
-        x_pos=x_pos+x_dot*self.dt
-        y_pos=y_pos+y_dot*self.dt
-        heading=heading+heading_dot*self.dt
-        xv=xv+xv_dot*self.dt
-        ya=ya+ya_dot*self.dt
-        xa=xa+xa_dot*self.dt
-        lat_velocity=lat_velocity+delta_dot*self.dt
+        # Acceleration dynamics (ignoring external forces for now)
+        xv_dot = xa  # longitudinal acceleration
+        ya_dot = xv * heading_dot  # centripetal acceleration
 
-        #Concatenateupdatedstate
-        x_plus=torch.cat(
-        (x_pos,y_pos,heading,xv,yv,xa,ya,lon_velocity,lat_velocity,lon_acceleration,lat_acceleration),
-        dim=1)
+        # Update state
+        x_pos = x_pos + x_dot * self.dt
+        y_pos = y_pos + y_dot * self.dt
+        heading = heading + heading_dot * self.dt
+        xv = xv + xv_dot * self.dt
+        ya = ya + ya_dot * self.dt
+
+        # Concatenate updated state
+        x_plus = torch.cat(
+            (x_pos, y_pos, heading, xv, yv, xa, ya, lon_velocity, lat_velocity, lon_acceleration, lat_acceleration),
+            dim=1
+        )
 
         return x_plus
 
     def loss_function(self, predictions, targets):
-        """
-        Loss function for the kinematic bicycle model (Mean Squared Error).
-        :param predictions: Predicted future positions and velocities
-        :param targets: Target future positions and velocities
-        :return: MSE loss
-        """
         # Ensure targets match predictions shape
         targets = targets.squeeze(1)
-        return F.mse_loss(predictions, targets)
+        return F.mse_loss(predictions, targets)  # Huber Loss
 
 
 class ConstantAccelerationModel(nn.Module):
@@ -171,9 +157,6 @@ class MultiLayerPerceptron(nn.Module):
 
     # Febin
     def loss_function(self, predictions, targets):
-        # print("inside mlp loss fn")
-        # Ensure predictions and targets have the same shape
-        # targets = targets.view_as(predictions) #Febin
         return F.mse_loss(predictions, targets)
 
 
@@ -193,18 +176,48 @@ class LSTMModel(nn.Module):
         h0 = torch.zeros(self.num_layers, batch_size, self.hidden_dim).to(x.device)
         c0 = torch.zeros(self.num_layers, batch_size, self.hidden_dim).to(x.device)
 
-        #print(f"x shape: {x.shape}")
-        #print(f"h0 shape: {h0.shape}")
-        #print(f"c0 shape: {c0.shape}")
-        #x = x.contiguous()
-        #print(f"Input is contiguous: {x.is_contiguous()}")
-
         out, _ = self.lstm(x, (h0, c0))
-        #print(f"out shape: {out.shape}")
 
         out = self.fc(out[:, -1, :])
 
         return out.view(batch_size, -1, self.output_dim)
+
+    def loss_function(self, predictions, targets):
+        return F.mse_loss(predictions, targets)
+
+
+class GRU(nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim, num_layers=1, dt=1.0):
+        super(GRU, self).__init__()
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.output_dim = output_dim
+        self.num_layers = num_layers
+        self.dt = dt
+
+        # Define the GRU layer
+        self.gru = nn.GRU(input_dim, hidden_dim, num_layers, batch_first=True)
+
+        # Output layer
+        self.fc = nn.Linear(hidden_dim, output_dim)
+
+    def forward(self, x):
+        # x shape: [batch_size, sequence_length, input_dim]
+
+        # Initialize hidden state for the first input
+        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(
+            x.device)  # h0 shape: [num_layers, batch_size, hidden_dim]
+
+        # Forward propagate the GRU
+        out, _ = self.gru(x, h0)  # out shape: [batch_size, sequence_length, hidden_dim]
+
+        # Take the output from the last time step in the sequence
+        out = out[:, -1, :]  # out shape: [batch_size, hidden_dim]
+
+        # Pass through the fully connected layer to get final predictions
+        out = self.fc(out)  # out shape: [batch_size, output_dim]
+
+        return out
 
     def loss_function(self, predictions, targets):
         return F.mse_loss(predictions, targets)

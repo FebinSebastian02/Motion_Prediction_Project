@@ -4,12 +4,37 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 # from lightning.pytorch.callbacks import ModelCheckpoint
 
 
-def create_callbacks():
+def create_callbacks(model_type):
     # TODO: Here are some examples for callback. They save your model, when a new best is achieved. Or help to adjust
     #  the learning rate.
-    cb = \
-        [#Only learning rate monitor() was uncommented before
-             ModelCheckpoint(monitor="training_loss",
+
+    if model_type == "MLP" or model_type == "LSTM" or model_type == "GRU":
+        cb = \
+            [#Only learning rate monitor() was uncommented before
+                 ModelCheckpoint(monitor="training_loss",
+                                 filename=f"{model_type}-checkpoint",
+                                 mode="min",
+                                 every_n_epochs=1,
+                                 save_top_k=2,
+                                 verbose="True",
+                                 auto_insert_metric_name="True",
+                                 save_on_train_epoch_end=True,),
+                 ModelCheckpoint(monitor="validation_loss",
+                                 filename="VAL_CKPT_{validation_loss:.6f}-{training_loss:.6f}-{epoch}",
+                                 mode="min",
+                                 every_n_epochs=1,
+                                 save_top_k=2,
+                                 verbose="True",
+                                 auto_insert_metric_name="True",),
+                 ModelCheckpoint(filename=f"{model_type}-checkpoint1",
+                 every_n_epochs=10,
+                 verbose="True",
+                 auto_insert_metric_name="True",),
+                LearningRateMonitor(logging_interval='step')
+            ]
+    else:
+        cb = \
+            [ModelCheckpoint(monitor="training_loss",
                              filename="TRAIN_CKPT_{training_loss:.6f}-{validation_loss:.6f}-{epoch}",
                              mode="min",
                              every_n_epochs=1,
@@ -29,5 +54,5 @@ def create_callbacks():
              verbose="True",
              auto_insert_metric_name="True",),
             LearningRateMonitor(logging_interval='step')
-        ]
+             ]
     return cb

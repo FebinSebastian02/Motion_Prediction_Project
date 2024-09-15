@@ -37,7 +37,7 @@ class inD_RecordingDataset(Dataset):
 
         pickle_filename = f"{path}/{recording_id}_processed_data.pkl"
 
-        if model_type == "MLP" or model_type == "LSTM":
+        if model_type == "MLP" or model_type == "LSTM" or model_type == "GRU":
             # Load processed data if it exists
             if os.path.exists(pickle_filename):
                 print("Loading processed data from pickle file.")
