@@ -1,11 +1,7 @@
 import lightning as pl
 import torch
 from torch.utils.data import DataLoader, random_split
-import os
-import pickle  # Febin
-from lit_dataset import inD_RecordingDataset
 from lit_dataset import *
-
 
 class inD_RecordingModule(pl.LightningDataModule):
     """LightningDataModule for inD dataset.
@@ -39,9 +35,9 @@ class inD_RecordingModule(pl.LightningDataModule):
         self.past_sequence_length = past_sequence_length
         self.future_sequence_length = future_sequence_length
         self.features = features
-        self.features_meta = features_meta  # Febin
-        self.stage = stage #Febin
-        self.model_type = model_type #Febin
+        self.features_meta = features_meta
+        self.stage = stage
+        self.model_type = model_type
         self.save_hyperparameters()
 
     def setup(self, stage: str):
@@ -55,25 +51,21 @@ class inD_RecordingModule(pl.LightningDataModule):
             # self.test = inD_RecordingDataset(self.data_path, self.recording_id, self.sequence_length,
             # self.features, self.transform)
             self.test = inD_RecordingDataset(self.data_path, self.recording_id, self.sequence_length, self.features,
-                                             self.features_meta, self.stage, self.model_type, self.transform)  # Febin
-
-            data_size = len(self.test)  # Febin
-            print(f"Data size:- {data_size}")  # Febin
+                                             self.features_meta, self.stage, self.model_type, self.transform)
+            data_size = len(self.test)
+            print(f"Data size:- {data_size}")
 
         if stage == "predict":
             self.predict = inD_RecordingDataset(self.data_path, self.recording_id, self.sequence_length, self.features,
                                                 self.transform)
         if stage == "fit":
-            # full = inD_RecordingDataset(self.data_path, self.recording_id, self.sequence_length, self.features, self.transform)
             full = inD_RecordingDataset(self.data_path, self.recording_id, self.sequence_length, self.features,
-                                        self.features_meta,  self.stage, self.model_type, self.transform)  # Febin
-
+                                        self.features_meta,  self.stage, self.model_type, self.transform)
             data_size = len(full)
-            print(f"Data size:- {data_size}")  # Febin
+            print(f"Data size:- {data_size}")
             # TODO: change the ration between train and val if you like!
-            train_size = int(0.95 * data_size)  # 0.8 - train, 0.2 - val
+            train_size = int(0.95 * data_size)
             val_size = int(data_size - train_size)
-
             print(f"Training size:- {train_size}, Validation size:- {val_size}")
             self.train, self.val = random_split(full, [train_size, val_size])
 

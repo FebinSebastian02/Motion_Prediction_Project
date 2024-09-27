@@ -13,7 +13,7 @@ def get_data_path():
 
     # data_directory = 'dataset/data'
     data_directory = ('C:\\Febin\\@RPTU\\Sem 2\\Seminar '
-                      'Electromobility\\Motion_Prediction\\code\\code\\data_processing\\dataset\\data')  # Febin1
+                      'Electromobility\\Motion_Prediction\\code\\code\\data_processing\\dataset\\data')
 
     data_path = os.path.join(project_path, data_directory)
     sys.path.append(data_path)

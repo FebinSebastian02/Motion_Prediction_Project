@@ -1,15 +1,12 @@
-import numpy as np
-import pandas as pd
 import torch
-import pickle #Febin
-import os #Febin
+import os
 from torch.utils.data import Dataset
 from torchvision import transforms
 from data_processing.preProcessing import *
 
+
 class inD_RecordingDataset(Dataset):
-    #def __init__(self, path, recording_id, sequence_length, features, train=True):
-    def __init__(self, path, recording_id, sequence_length, features, features_meta,  stage, model_type, train=True): #Febin
+    def __init__(self, path, recording_id, sequence_length, features, features_meta, stage, model_type, train=True):
         """Dataset for inD dataset.
         Parameters
         ----------
@@ -29,9 +26,9 @@ class inD_RecordingDataset(Dataset):
         self.recording_id = recording_id
         self.sequence_length = sequence_length
         self.features = features
-        self.features_meta = features_meta #Febin
-        self.stage = stage #Febin
-        self.model_type = model_type #Febin
+        self.features_meta = features_meta
+        self.stage = stage
+        self.model_type = model_type
         self.train = train
         self.transform = self.get_transform()
 
@@ -47,22 +44,22 @@ class inD_RecordingDataset(Dataset):
 
             else:
                 print("Processing data...")
+
                 if type(self.recording_id) == list:
                     self.data = pd.DataFrame()
-                    self.meta_data = pd.DataFrame()  # Febin - Creating an empty panda dataframe for meta files
+                    self.meta_data = pd.DataFrame()  # Creating an empty panda dataframe for meta files
                     # TODO: Here we are simply loading the csv and stack them into one pandas dataframe.
-                    # You have to change this to load your data. This is just meant as a dummy example!!!
                     for id in self.recording_id:
                         with open(f"{path}/{id}_tracks.csv", 'rb') as f:
                             self.data = pd.concat([self.data,
                                                    pd.read_csv(f, delimiter=',', header=0, usecols=self.features,
                                                                dtype='float16')])
-                    # Febin - For meta files
+                    # For meta files
                     for id in self.recording_id:
                         with open(f"{path}/{id}_tracksMeta.csv", 'rb') as f:
                             self.meta_data = pd.concat(
                                 [self.meta_data, pd.read_csv(f, delimiter=',', header=0, usecols=self.features_meta)])
-                    # Febin - For data processing
+                    # For data processing
                     print(f"\n///Raw tracks_data/// \n {self.data}")
                     print(f"\n///Raw tracks_meta_data/// \n {self.meta_data}")
                     preprocessor = DataPreprocessor(self.data)  # Calling data preprocessor constructor
@@ -75,65 +72,36 @@ class inD_RecordingDataset(Dataset):
                     normalized_data = preprocessor.normalize(downsample_data, self.features)
                     print(f"\n///Normalized_data/// \n {normalized_data}")
                     print("\nData written to CSV file successfully.")
-
                     preprocessor.save_to_pickle(pickle_filename)
-
                     self.data = normalized_data
 
                 else:
                     with open(f"{path}/{recording_id}_tracks.csv", 'rb') as f:
                         self.data = pd.read_csv(f, delimiter=',', header=0, usecols=self.features, dtype='float16')
-                        #Febin3
-                        #Add self.meta data here and concatenate both tracks and meta data here before giving to train and test
 
         elif model_type == "CVM" or model_type == "CAM" or model_type == "BCM":
-                if type(self.recording_id) == list:
-                    self.data = pd.DataFrame()
-                    self.meta_data = pd.DataFrame()  # Febin - Creating an empty panda dataframe for meta files
-                    # TODO: Here we are simply loading the csv and stack them into one pandas dataframe.
-                    # You have to change this to load your data. This is just meant as a dummy example!!!
-                    for id in self.recording_id:
-                        with open(f"{path}/{id}_tracks.csv", 'rb') as f:
-                            self.data = pd.concat([self.data,
-                                                   pd.read_csv(f, delimiter=',', header=0, usecols=self.features,
-                                                               dtype='float16')])
-                    # Febin - For meta files
-                    for id in self.recording_id:
-                        with open(f"{path}/{id}_tracksMeta.csv", 'rb') as f:
-                            self.meta_data = pd.concat(
-                                [self.meta_data, pd.read_csv(f, delimiter=',', header=0, usecols=self.features_meta)])
 
-                    print(f"\n///Raw tracks_data/// \n {self.data}")
-                    print(f"\n///Raw tracks_meta_data/// \n {self.meta_data}")
-                    #preprocessor = DataPreprocessor(self.data)  # Calling data preprocessor constructor
-                    #downsample_data = preprocessor.downsample(1)  # Down sampling the data to 50% of its original size
-                    #print(f"\n///Downsampled_data/// \n {downsample_data}")
+            if type(self.recording_id) == list:
+                self.data = pd.DataFrame()
+                self.meta_data = pd.DataFrame()  # Creating an empty panda dataframe for meta files
+                # TODO: Here we are simply loading the csv and stack them into one pandas dataframe.
+                for id in self.recording_id:
+                    with open(f"{path}/{id}_tracks.csv", 'rb') as f:
+                        self.data = pd.concat([self.data,
+                                               pd.read_csv(f, delimiter=',', header=0, usecols=self.features,
+                                                           dtype='float16')])
+                # For meta files
+                for id in self.recording_id:
+                    with open(f"{path}/{id}_tracksMeta.csv", 'rb') as f:
+                        self.meta_data = pd.concat(
+                            [self.meta_data, pd.read_csv(f, delimiter=',', header=0, usecols=self.features_meta)])
 
-                    #self.data = downsample_data
+                print(f"\n///Raw tracks_data/// \n {self.data}")
+                print(f"\n///Raw tracks_meta_data/// \n {self.meta_data}")
 
-
-                else:
-                    with open(f"{path}/{recording_id}_tracks.csv", 'rb') as f:
-                        self.data = pd.read_csv(f, delimiter=',', header=0, usecols=self.features, dtype='float16')
-                        #Febin3
-                        #Add self.meta data here and concatenate both tracks and meta data here before giving to train and test
-
-                """if stage == "fit":
-                    # To write byte data into a file
-                    print(f"\nstage is: {stage}")
-                    mds = open("18_modified_dataset.txt", 'wb')
-                    pickle.dump(self.data, mds)
-                    mds.close()
-
-                #if stage == "test":
-                    # To read byte data
-                    #mds = open(f"{path}/{id}_modified_dataset.txt",
-                               #'rb')  # Opens already written modified_dataset.txt and reads its content and store it in mds object.
-                    #modified_dataset = pickle.load(
-                        #mds)  # The mds object is loaded to read the byte content and is stored to modifiedDataSet object
-                    #print(f"\n\nModified Dataset:- \n{modified_dataset}")
-                    #mds.close()  # mds object is closed"""
-
+            else:
+                with open(f"{path}/{recording_id}_tracks.csv", 'rb') as f:
+                    self.data = pd.read_csv(f, delimiter=',', header=0, usecols=self.features, dtype='float16')
 
     def __len__(self):
         """
