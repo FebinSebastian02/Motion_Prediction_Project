@@ -4,4 +4,6 @@
 /venv
 /training_and_testing/normalized_data.csv
 /training_and_testing/labelEncoded_data.csv
-
+/test_loss_results/GRU_Predictions.csv
+/test_loss_results/LSTM_Predictions.csv
+/test_loss_results/MLP_Predictions.csv
